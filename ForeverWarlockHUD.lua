@@ -2796,6 +2796,7 @@ do
     Para("The grid is on screen while this window is open. \"Snap items to grid\" drops an item on the nearest grid line; \"Grid size\" sets the spacing.")
     Para("\"Stick items together\" makes an item dropped right next to another one click against its edge. It needs Snap to be on.")
     Para("With this window closed the HUD cannot be clicked or moved at all, so it never gets in the way of the game.")
+    Para("This HUD only starts on a warlock. On any other class it stays completely off: nothing on screen, nothing saved.")
     DividerRow(flow)
     HeaderRow(flow, "What is on screen")
     Para("Mana bar and mana regen: your resource and how fast it is coming in. Swing timer: your auto-attack. Each has a Show box on the HUD tab.")
@@ -3410,6 +3411,18 @@ end)
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
 boot:SetScript("OnEvent", function()
+    -- only for the warlock: the class is asked once, here
+    local okClass, _, classFile = pcall(UnitClass, "player")
+    if not (okClass and IsReadable(classFile) and classFile == "WARLOCK") then
+        ME.wrongClass = true
+        for _, fr in ipairs(ALL_ITEMS) do fr:Hide() end
+        panel:Hide()
+        if gridFrame then gridFrame:Hide() end
+        driver:SetScript("OnUpdate", nil)
+        driver:SetScript("OnEvent", nil)
+        if driver.UnregisterAllEvents then driver:UnregisterAllEvents() end
+        return
+    end
     if type(ForeverWarlockHUD_DB) ~= "table" then ForeverWarlockHUD_DB = {} end
     db = ForeverWarlockHUD_DB
     for k, v in pairs(DEFAULTS) do
@@ -3469,6 +3482,10 @@ end)
 -----------------------------------------------------------------------
 SLASH_FOREVERWARLOCKHUD1 = "/fwl"
 SlashCmdList.FOREVERWARLOCKHUD = function(msg)
+    if ME.wrongClass or not db then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ccffForeverWarlockHUD|r is for the warlock class and stays off on this character.")
+        return
+    end
     local raw = (msg or ""):gsub("^%s+", ""):gsub("%s+$", "")
     msg = raw:lower()
     if msg == "" or msg == "options" or msg == "panel" then
